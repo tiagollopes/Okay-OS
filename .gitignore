@@ -1,4 +1,3 @@
+/build/*
 *.bin
 *.img
-build/*
-!build/.gitkeep
