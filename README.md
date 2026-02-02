@@ -1,46 +1,49 @@
 # Okay-OS
 
-Sistema operacional educacional criado do zero, com foco em baixo nível.
+O **Okay-OS** é um sistema operacional educacional escrito do zero para arquitetura x86. O objetivo deste projeto é aprender, na prática, como o hardware e o software se comunicam nos níveis mais baixos.
 
-## Fase atual
-Bootloader em Assembly que:
-- Inicializa em 16 bits (Real Mode)
-- Configura GDT
-- Entra em 32 bits (Protected Mode)
-- Transfere execução para um kernel 32 bits em C
-- Escrita direta na memória de vídeo (VGA)
+## Fase Atual: O Salto para 32 Bits (Modo Protegido)
 
-## Status
-- Protected Mode 32 bits funcionando
-- Kernel em C executando corretamente no QEMU
-- Base pronta para evolução (C, drivers, multitarefa etc.)
+Atualmente, o sistema já consegue sair do "Modo Real" (16 bits) e entrar no "Modo Protegido" (32 bits). Isso é fundamental para que possamos escrever o Kernel em linguagens de alto nível, como **C**, em vez de apenas Assembly.
 
-## Como compilar e rodar
-Para compilar e rodar o sistema, siga os passos abaixo:
+### Como o sistema inicia:
+1.  **Bootloader (`boot.asm`)**: O PC liga em 16 bits. O bootloader prepara a GDT (Global Descriptor Table), ativa o Modo Protegido e carrega o kernel do disco para a memória.
+2.  **Porteiro (`entry.asm`)**: Um pequeno código em Assembly de 32 bits que serve de ponte, chamando a função principal do Kernel em C.
+3.  **Kernel (`kernel.c`)**: O "cérebro" do sistema. Nesta fase, ele escreve diretamente na memória de vídeo VGA (endereço `0xB8000`) para exibir mensagens na tela.
 
-1 - Criar a pasta de build:
+---
 
-mkdir -p build
+## 🛠️ Como Compilar e Executar
 
-2 - Compilar o kernel e gerar o binário:
+Este projeto foi desenvolvido em ambiente Linux (Lubuntu/Ubuntu).
 
-nasm -f elf32 kernel/entry.asm -o build/entry.o
+### Pré-requisitos
+1. Abra o seu terminal e instale as ferramentas necessárias:
 
-nasm -f elf32 kernel/kernel.asm -o build/kernel.o
+sudo apt update
+sudo apt install nasm gcc-multilib build-essential qemu-system-x86
 
-i386-elf-gcc -ffreestanding -c kernel/kernel.c -o build/kernel_c.o
+2. Compilar (Build)
+O projeto possui um script que faz todo o trabalho pesado de compilação e montagem da imagem do disco:
 
-ld -m elf_i386 -T linker.ld -o build/kernel.bin build/entry.o build/kernel.o build/kernel_c.o --oformat binary
 
-3 - Compilar o bootloader e montar a imagem final:
+chmod +x build.sh
+./build.sh
+Isso gerará o arquivo build/os.img.
 
-nasm -f bin boot/boot.asm -o build/boot.bin
+3. Executar no QEMU
+Para ver o sistema funcionando em um emulador:
 
-cat build/boot.bin build/kernel.bin > build/os.img
-
-4 - Rodar no QEMU:
 
 qemu-system-i386 -drive format=raw,file=build/os.img
 
+Estrutura de Arquivos
+boot/boot.asm: Código de inicialização (16-bit).
 
+kernel/entry.asm: Ponto de entrada para o modo 32-bit.
 
+kernel/kernel.c: Lógica principal em C.
+
+linker.ld: Mapa que organiza onde cada pedaço de código fica na memória.
+
+build.sh: Script de automação do processo de compilação.
