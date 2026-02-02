@@ -1,90 +1,46 @@
-org 0x7C00
+; boot.asm
+[org 0x7C00]
 bits 16
 
 start:
     cli
     xor ax, ax
     mov ds, ax
+    mov es, ax
     mov ss, ax
     mov sp, 0x7C00
+    sti
 
-    ; carregar GDT
-    lgdt [gdt_descriptor]
+    ; Limpa tela
+    mov ax, 0x0003
+    int 0x10
 
-    ; habilitar protected mode
-    mov eax, cr0
-    or eax, 1
-    mov cr0, eax
+    ; ---- Ler kernel do disco ----
+    mov ah, 0x02        ; INT 13h - read sectors
+    mov al, 1           ; número de setores
+    mov ch, 0           ; cilindro
+    mov cl, 2           ; setor 2 (logo após boot)
+    mov dh, 0           ; head
+    mov dl, 0x80        ; disco (HD)
+    mov bx, 0x1000      ; destino
+    int 0x13
 
-    ; salto FAR para 32 bits
-    jmp CODE_SEG:pm_start
+    jc disk_error
 
-; =========================
-; GDT
-; =========================
-gdt_start:
-    dq 0x0000000000000000
-gdt_code:
-    dq 0x00CF9A000000FFFF
-gdt_data:
-    dq 0x00CF92000000FFFF
-gdt_end:
+    ; ---- Pular para kernel ----
+    jmp 0x0000:0x1000
 
-; descritor da GDT
-gdt_descriptor:
-    dw gdt_end - gdt_start - 1
-    dd gdt_start
-
-; seletores (ISSENCIAL estarem aqui)
-CODE_SEG equ gdt_code - gdt_start
-DATA_SEG equ gdt_data - gdt_start
-
-; =========================
-; 32 BITS
-; =========================
-bits 32
-pm_start:
-    mov ax, DATA_SEG
-    mov ds, ax
-    mov es, ax
-    mov fs, ax
-    mov gs, ax
-    mov ss, ax
-    mov esp, 0x90000
-
-    ; -----------------
-    ; Limpa a tela
-    ; -----------------
-    mov edi, 0xB8000
-    mov ecx, 2000
-    mov eax, 0x07200720
-
-.clear:
-    mov [edi], eax
-    add edi, 4
-    loop .clear
-
-    ; -----------------
-    ; Escreve mensagem
-    ; -----------------
-    mov edi, 0xB8000
-    mov esi, message
-
+disk_error:
+    mov si, msg
 .print:
     lodsb
-    test al, al
-    jz .hang
-    mov [edi], al
-    mov byte [edi+1], 0x0F
-    add edi, 2
+    or al, al
+    jz $
+    mov ah, 0x0E
+    int 0x10
     jmp .print
 
-.hang:
-    cli
-    hlt
+msg db "DISK ERROR", 0
 
-message:
-    db 'Kernel 32 bits ATIVO!', 0
-
-times 510 - ($ - $$) db 0
+times 510-($-$$) db 0
 dw 0xAA55
