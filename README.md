@@ -7,10 +7,32 @@ Bootloader em Assembly que:
 - Inicializa em 16 bits (Real Mode)
 - Configura GDT
 - Entra em 32 bits (Protected Mode)
-- Transfere execução para um kernel 32 bits
+- Transfere execução para um kernel 32 bits em C
+- Escrita direta na memória de vídeo (VGA)
 
 ## Status
 - Protected Mode 32 bits funcionando
-- Escrita direta na memória de vídeo (VGA)
-- Executando corretamente no QEMU
-- Base pronta para entrada de kernel em C
+- Kernel em C executando corretamente no QEMU
+- Base pronta para evolução (C, drivers, multitarefa etc.)
+
+## Como compilar e rodar
+Para compilar e rodar o sistema, siga os passos abaixo:
+
+Criar a pasta de build:
+    mkdir -p build
+
+Compilar o kernel e gerar o binário:
+    nasm -f elf32 kernel/entry.asm -o build/entry.o
+    nasm -f elf32 kernel/kernel.asm -o build/kernel.o
+    i386-elf-gcc -ffreestanding -c kernel/kernel.c -o build/kernel_c.o
+    ld -m elf_i386 -T linker.ld -o build/kernel.bin build/entry.o build/kernel.o build/kernel_c.o --oformat binary
+
+Compilar o bootloader e montar a imagem final:
+    nasm -f bin boot/boot.asm -o build/boot.bin
+    cat build/boot.bin build/kernel.bin > build/os.img
+
+Rodar no QEMU:
+    qemu-system-i386 -drive format=raw,file=build/os.img
+
+
+
