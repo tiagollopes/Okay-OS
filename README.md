@@ -1,15 +1,19 @@
 # Okay-OS
 
-O **Okay-OS** é um sistema operacional educacional escrito do zero para arquitetura x86. O objetivo deste projeto é aprender, na prática, como o hardware e o software se comunicam nos níveis mais baixos.
+O **Okay-OS** é um sistema operacional educacional escrito do zero para arquitetura x86.
 
-## Fase Atual: O Salto para 32 Bits (Modo Protegido)
+O objetivo deste projeto é aprender, na prática, como o hardware e o software se comunicam nos níveis mais baixos.
 
-Atualmente, o sistema já consegue sair do "Modo Real" (16 bits) e entrar no "Modo Protegido" (32 bits). Isso é fundamental para que possamos escrever o Kernel em linguagens de alto nível, como **C**, em vez de apenas Assembly.
+## Fase Atual: Interface e Entrada de Dados (32 Bits)
 
-### Como o sistema inicia:
-1.  **Bootloader (`boot.asm`)**: O PC liga em 16 bits. O bootloader prepara a GDT (Global Descriptor Table), ativa o Modo Protegido e carrega o kernel do disco para a memória.
-2.  **Porteiro (`entry.asm`)**: Um pequeno código em Assembly de 32 bits que serve de ponte, chamando a função principal do Kernel em C.
-3.  **Kernel (`kernel.c`)**: O "cérebro" do sistema. Nesta fase, ele escreve diretamente na memória de vídeo VGA (endereço `0xB8000`) para exibir mensagens na tela.
+O sistema evoluiu! Além de rodar em **Modo Protegido (32 bits)**, ele agora possui drivers básicos para interação com o usuário.
+
+### O que o sistema já faz:
+
+1.  **Bootloader (`boot.asm`)**: Faz o salto do Modo Real para o Modo Protegido e configura a GDT.
+2.  **Driver de Vídeo VGA**: Escreve diretamente na memória `0xB8000`, com suporte a cores e controle do cursor de hardware.
+3.  **Driver de Teclado**: Lê *scancodes* via porta `0x60` e traduz para caracteres ASCII, permitindo digitação em tempo real.
+4.  **Gerenciamento de Cursor**: O cursor piscante (`_`) acompanha a digitação e reage ao Backspace.
 
 ---
 
@@ -17,33 +21,42 @@ Atualmente, o sistema já consegue sair do "Modo Real" (16 bits) e entrar no "Mo
 
 Este projeto foi desenvolvido em ambiente Linux (Lubuntu/Ubuntu).
 
-### Pré-requisitos
-1. Abra o seu terminal e instale as ferramentas necessárias:
+### 1. Pré-requisitos
 
-sudo apt update
-sudo apt install nasm gcc-multilib build-essential qemu-system-x86
+Instale as ferramentas de compilação e o emulador:
 
-2. Compilar (Build)
-O projeto possui um script que faz todo o trabalho pesado de compilação e montagem da imagem do disco:
+`sudo apt update`
 
+`sudo apt install nasm gcc-multilib build-essential qemu-system-x86`
 
-chmod +x build.sh
-./build.sh
-Isso gerará o arquivo build/os.img.
+### 2. Compilar (Build)
 
-3. Executar no QEMU
-Para ver o sistema funcionando em um emulador:
+Use o script de automação para gerar a imagem do sistema:
 
 
-qemu-system-i386 -drive format=raw,file=build/os.img
+`chmod +x build.sh`
 
-Estrutura de Arquivos
-boot/boot.asm: Código de inicialização (16-bit).
+`./build.sh`
 
-kernel/entry.asm: Ponto de entrada para o modo 32-bit.
+Isso gerará o arquivo build/os.img
 
-kernel/kernel.c: Lógica principal em C.
+### 3. Executar no QEMU
 
-linker.ld: Mapa que organiza onde cada pedaço de código fica na memória.
+Para rodar o SO com o mapa de teclado correto:
 
-build.sh: Script de automação do processo de compilação.
+`qemu-system-i386 -drive format=raw,file=build/os.img -k pt-br`
+
+*(Dica: Clique dentro da janela do QEMU para o sistema capturar seu teclado. Use Ctrl+Alt ou Ctrl+Alt+G para sair).*
+
+
+**Estrutura de Arquivos**
+
+boot/boot.asm: *Inicialização, GDT e salto para 32-bit.*
+
+kernel/entry.asm: *Ponte entre o Assembly e o Kernel em C.*
+
+kernel/kernel.c: *Coração do sistema (Drivers de vídeo, cursor e teclado).*
+
+linker.ld: *Define a organização do código na memória RAM.*
+
+build.sh: *Script que automatiza o GCC, NASM e LD.*
