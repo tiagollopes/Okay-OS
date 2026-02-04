@@ -14,7 +14,7 @@ start:
 
     ; Carrega o kernel do disco (Lendo 15 setores para garantir)
     mov ah, 0x02
-    mov al, 15
+    mov al, 30
     mov ch, 0
     mov cl, 2           ; Setor 2 (onde começa o kernel)
     mov dh, 0
