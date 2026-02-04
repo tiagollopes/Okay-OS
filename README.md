@@ -16,7 +16,7 @@ O sistema evoluiu drasticamente! Além de rodar em **Modo Protegido (32 bits)**,
 * **Interpretador de Comandos**:
     * `--HELP`: Busca e exibe instruções do arquivo de dados.
     * `--VERSION`: Exibe a versão atual do sistema carregada do disco.
-    * `CAT [NOME]`: Comando dinâmico que localiza tags customizadas na memória.
+    * `--INFO`: Exibe informações atual do sistema carregado do disco.
     * `CLEAR`: Limpa o buffer de vídeo e reseta a posição do cursor.
 * **Gerenciamento de Cursor**: Controle via portas de hardware (0x3D4/0x3D5) para acompanhar a digitação.
 
@@ -46,6 +46,7 @@ chmod +x build.sh
 qemu-system-i386 -drive format=raw,file=build/os.img
 ```
 ***Estrutura do Projeto***
+
 boot/boot.asm: Inicialização, GDT e carregamento de setores do disco.
 
 kernel/kernel.c: Core do SO, drivers e lógica de busca por tags ASCII.
@@ -57,7 +58,9 @@ linker.ld: Organiza o binário para que o código comece exatamente em 0x1000.
 build.sh: Automação do pipeline (GCC -> NASM -> LD -> TRUNCATE -> CAT).
 
 🛡️ Licença
+
 Projeto para fins educacionais. Sinta-se à vontade para explorar e modificar!
 
 Feito por Tiago LLopes
+
 Santos/SP - Brasil
