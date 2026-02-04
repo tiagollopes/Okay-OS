@@ -1,62 +1,63 @@
-# Okay-OS
+#  Okay-OS
 
-O **Okay-OS** é um sistema operacional educacional escrito do zero para arquitetura x86.
+O **Okay-OS** é um sistema operacional educacional escrito do zero para a arquitetura x86. O objetivo deste projeto é aprender, na prática, como o hardware e o software se comunicam nos níveis mais baixos (Ring 0).
 
-O objetivo deste projeto é aprender, na prática, como o hardware e o software se comunicam nos níveis mais baixos.
+---
 
-## Fase Atual: Interface e Entrada de Dados (32 Bits)
+##  Fase Atual: Sistema de Arquivos e Tags (v1.0.2)
 
-O sistema evoluiu! Além de rodar em **Modo Protegido (32 bits)**, ele agora possui drivers básicos para interação com o usuário.
+O sistema evoluiu drasticamente! Além de rodar em **Modo Protegido (32 bits)**, ele agora possui um sistema de busca de dados em memória e um interpretador de comandos básico.
 
-### O que o sistema já faz:
+###  O que o sistema já faz:
 
-1.  **Bootloader (`boot.asm`)**: Faz o salto do Modo Real para o Modo Protegido e configura a GDT.
-2.  **Driver de Vídeo VGA**: Escreve diretamente na memória `0xB8000`, com suporte a cores e controle do cursor de hardware.
-3.  **Driver de Teclado**: Lê *scancodes* via porta `0x60` e traduz para caracteres ASCII, permitindo digitação em tempo real.
-4.  **Gerenciamento de Cursor**: O cursor piscante (`_`) acompanha a digitação e reage ao Backspace.
+* **Bootloader (`boot.asm`)**: Gerencia o salto do Modo Real para o Modo Protegido, configura a GDT e carrega múltiplos setores do disco para a RAM.
+* **Kernel em C**: Gerencia a lógica do sistema com drivers de vídeo VGA (0xB8000) e teclado (Porta 0x60).
+* **SFS (Simple File System)**: Implementação de um sistema de arquivos baseado em tags no arquivo `init.ok`.
+* **Interpretador de Comandos**:
+    * `--HELP`: Busca e exibe instruções do arquivo de dados.
+    * `--VERSION`: Exibe a versão atual do sistema carregada do disco.
+    * `CAT [NOME]`: Comando dinâmico que localiza tags customizadas na memória.
+    * `CLEAR`: Limpa o buffer de vídeo e reseta a posição do cursor.
+* **Gerenciamento de Cursor**: Controle via portas de hardware (0x3D4/0x3D5) para acompanhar a digitação.
 
 ---
 
 ## 🛠️ Como Compilar e Executar
 
-Este projeto foi desenvolvido em ambiente Linux (Lubuntu/Ubuntu).
+Este projeto foi desenvolvido e testado em ambiente Linux (**Lubuntu/Ubuntu**).
 
 ### 1. Pré-requisitos
-
-Instale as ferramentas de compilação e o emulador:
-
-`sudo apt update`
-
-`sudo apt install nasm gcc-multilib build-essential qemu-system-x86`
+Instale as ferramentas necessárias:
+```bash
+sudo apt update
+sudo apt install nasm gcc-multilib build-essential qemu-system-x86
+```
 
 ### 2. Compilar (Build)
+O sistema utiliza um script inteligente que garante o alinhamento de 4KB para o Kernel e injeta o sistema de arquivos:
 
-Use o script de automação para gerar a imagem do sistema:
-
-
-`chmod +x build.sh`
-
-`./build.sh`
-
-Isso gerará o arquivo build/os.img
+```Bash
+chmod +x build.sh
+./build.sh
+```
 
 ### 3. Executar no QEMU
+```Bash
+qemu-system-i386 -drive format=raw,file=build/os.img
+```
+***Estrutura do Projeto***
+boot/boot.asm: Inicialização, GDT e carregamento de setores do disco.
 
-Para rodar o SO com o mapa de teclado correto:
+kernel/kernel.c: Core do SO, drivers e lógica de busca por tags ASCII.
 
-`qemu-system-i386 -drive format=raw,file=build/os.img -k pt-br`
+init.ok: Nosso "disco rígido" virtual contendo as strings e dados do sistema.
 
-*(Dica: Clique dentro da janela do QEMU para o sistema capturar seu teclado. Use Ctrl+Alt ou Ctrl+Alt+G para sair).*
+linker.ld: Organiza o binário para que o código comece exatamente em 0x1000.
 
+build.sh: Automação do pipeline (GCC -> NASM -> LD -> TRUNCATE -> CAT).
 
-**Estrutura de Arquivos**
+🛡️ Licença
+Projeto para fins educacionais. Sinta-se à vontade para explorar e modificar!
 
-boot/boot.asm: *Inicialização, GDT e salto para 32-bit.*
-
-kernel/entry.asm: *Ponte entre o Assembly e o Kernel em C.*
-
-kernel/kernel.c: *Coração do sistema (Drivers de vídeo, cursor e teclado).*
-
-linker.ld: *Define a organização do código na memória RAM.*
-
-build.sh: *Script que automatiza o GCC, NASM e LD.*
+Feito por Tiago LLopes
+Santos/SP - Brasil
