@@ -88,13 +88,15 @@ void buscar_e_imprimir_tag(const char* tag, int* pos) {
         *pos = ((*pos / 160) + 1) * 160;
     }
 }
-/* --- Função Principal --- */
 
 void kernel_main() {
     char* video = (char*) 0xB8000;
     char buffer[80];
     int buf_idx = 0;
     int pos = 0;
+
+    // Estado do Caps Lock (0 = Desligado/Minúsculas, 1 = Ligado/Maiúsculas)
+    int caps_lock_ativo = 0;
 
     void limpar_tela() {
         for (int n = 0; n < 80 * 25 * 2; n += 2) {
@@ -104,14 +106,20 @@ void kernel_main() {
     }
 
     limpar_tela();
-    print("OKAY-OS", &pos, 0x0B);
-    pos = 160; // Pula para a segunda linha
+    print("OKAY-OS v1.0.3", &pos, 0x0B);
+    pos = 160;
     print("> ", &pos, 0x0A);
     update_cursor(pos);
 
     while (1) {
         if (inb(0x64) & 0x01) {
             unsigned char scancode = inb(0x60);
+
+            // 1. Verificar se o Caps Lock foi pressionado (Scancode 0x3A)
+            if (scancode == 0x3A) {
+                caps_lock_ativo = !caps_lock_ativo; // Inverte o estado
+            }
+
             if (scancode < 0x80) {
                 char letra = 0;
                 switch(scancode) {
@@ -128,34 +136,32 @@ void kernel_main() {
                     case 0x16: letra = 'U'; break; case 0x2F: letra = 'V'; break;
                     case 0x11: letra = 'W'; break; case 0x2D: letra = 'X'; break;
                     case 0x15: letra = 'Y'; break; case 0x2C: letra = 'Z'; break;
-                    case 0x0C: letra = '-'; break;
+
+                    case 0x02: letra = '1'; break; case 0x03: letra = '2'; break;
+                    case 0x04: letra = '3'; break; case 0x05: letra = '4'; break;
+                    case 0x06: letra = '5'; break; case 0x07: letra = '6'; break;
+                    case 0x08: letra = '7'; break; case 0x09: letra = '8'; break;
+                    case 0x0A: letra = '9'; break; case 0x0B: letra = '0'; break;
+
+                    case 0x34: letra = '.'; break; case 0x33: letra = ','; break;
+                    case 0x27: letra = ';'; break; case 0x0C: letra = '-'; break;
                     case 0x39: letra = ' '; break;
-                    case 0x1C: // TECLA ENTER
-                        buffer[buf_idx] = '\0'; // Finaliza a string
 
-                        // DEBUG: Vamos ver o que o Kernel recebeu
-                        // Pula linha e mostra o que foi digitado entre aspas
-                       // pos = ((pos / 160) + 1) * 160;
-                        // print("DEBUG: VOCE DIGITOU [", &pos, 0x07);
-                        // print(buffer, &pos, 0x0F);
-                        // print("]", &pos, 0x07);
-                        // pos = ((pos / 160) + 1) * 160;
+                    case 0x1C: // ENTER
+                        buffer[buf_idx] = '\0';
 
-                        // Comparações
-                        if (starts_with(buffer, "--HELP")) {
+                        // Agora verificamos comandos de forma mais flexível (Caps off)
+                        if (starts_with(buffer, "--HELP") || starts_with(buffer, "--help")) {
                             buscar_e_imprimir_tag("[HELP]", &pos);
                         }
-                        else if (starts_with(buffer, "--VERSION")) {
+                        else if (starts_with(buffer, "--VERSION") || starts_with(buffer, "--version")) {
                             buscar_e_imprimir_tag("[VERS]", &pos);
                         }
-                        else if (starts_with(buffer, "--INFO")) {
-                            buscar_e_imprimir_tag("[INFO]", &pos);
-                        }
-                        else if (starts_with(buffer, "CLEAR")) {
+                        else if (starts_with(buffer, "CLEAR") || starts_with(buffer, "clear")) {
                             limpar_tela();
                             pos = 0;
                         }
-                        else {
+                        else if (buf_idx > 0) {
                             pos = ((pos / 160) + 1) * 160;
                             print("COMANDO DESCONHECIDO", &pos, 0x0C);
                             pos = ((pos / 160) + 1) * 160;
@@ -175,6 +181,12 @@ void kernel_main() {
                         }
                         continue;
                 }
+
+                // 2. Lógica de Caixa Baixa: Se Caps Lock está OFF e é uma letra, soma 32 (ASCII)
+                if (!caps_lock_ativo && letra >= 'A' && letra <= 'Z') {
+                    letra = letra + 32;
+                }
+
                 if (letra != 0 && buf_idx < 79) {
                     buffer[buf_idx++] = letra;
                     video[pos] = letra;
