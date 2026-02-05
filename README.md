@@ -4,9 +4,19 @@ O **Okay-OS** é um sistema operacional educacional escrito do zero para a arqui
 
 ---
 
-##  Fase Atual: Sistema de Arquivos e Tags (v1.0.2)
+##  Fase Atual: Sistema de Arquivos e Tags (v1.0.3)
 
-O sistema evoluiu drasticamente! Além de rodar em **Modo Protegido (32 bits)**, ele agora possui um sistema de busca de dados em memória e um interpretador de comandos básico.
+O sistema agora oferece uma experiência de digitação muito mais completa e um interpretador de comandos mais inteligente.
+
+***Novidades desta versão:***
+
+Teclado Completo: Suporte para números (0-9) e símbolos essenciais (., ,, ;, -).
+
+Gestão de Caps Lock: Implementação de lógica de estado (toggle) para alternar entre letras maiúsculas e minúsculas.
+
+Comandos Flexíveis: O interpretador agora aceita comandos tanto em caixa alta quanto baixa (ex: CLEAR ou clear).
+
+Estabilidade de Memória: Busca de arquivos otimizada para evitar conflitos com o código do Kernel.
 
 ###  O que o sistema já faz:
 
