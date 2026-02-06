@@ -95,8 +95,9 @@ void kernel_main() {
     int buf_idx = 0;
     int pos = 0;
 
-    // Estado do Caps Lock (0 = Desligado/Minúsculas, 1 = Ligado/Maiúsculas)
+    // Estados do Teclado
     int caps_lock_ativo = 0;
+    int shift_pressionado = 0;
 
     void limpar_tela() {
         for (int n = 0; n < 80 * 25 * 2; n += 2) {
@@ -115,14 +116,24 @@ void kernel_main() {
         if (inb(0x64) & 0x01) {
             unsigned char scancode = inb(0x60);
 
-            // 1. Verificar se o Caps Lock foi pressionado (Scancode 0x3A)
-            if (scancode == 0x3A) {
-                caps_lock_ativo = !caps_lock_ativo; // Inverte o estado
+            // 1. Detectar SHIFT (Pressionado e Solto)
+            if (scancode == 0x2A || scancode == 0x36) {
+                shift_pressionado = 1;
+            }
+            else if (scancode == 0xAA || scancode == 0xB6) {
+                shift_pressionado = 0;
             }
 
+            // 2. Detectar CAPS LOCK (Toggle)
+            else if (scancode == 0x3A) {
+                caps_lock_ativo = !caps_lock_ativo;
+            }
+
+            // 3. Processar teclas quando pressionadas (scancode < 0x80)
             if (scancode < 0x80) {
                 char letra = 0;
                 switch(scancode) {
+                    // Letras
                     case 0x1E: letra = 'A'; break; case 0x30: letra = 'B'; break;
                     case 0x2E: letra = 'C'; break; case 0x20: letra = 'D'; break;
                     case 0x12: letra = 'E'; break; case 0x21: letra = 'F'; break;
@@ -137,25 +148,39 @@ void kernel_main() {
                     case 0x11: letra = 'W'; break; case 0x2D: letra = 'X'; break;
                     case 0x15: letra = 'Y'; break; case 0x2C: letra = 'Z'; break;
 
-                    case 0x02: letra = '1'; break; case 0x03: letra = '2'; break;
-                    case 0x04: letra = '3'; break; case 0x05: letra = '4'; break;
-                    case 0x06: letra = '5'; break; case 0x07: letra = '6'; break;
-                    case 0x08: letra = '7'; break; case 0x09: letra = '8'; break;
-                    case 0x0A: letra = '9'; break; case 0x0B: letra = '0'; break;
+                    // Números e Símbolos Superiores (Usa Operador Ternário para decidir)
+                    case 0x02: letra = shift_pressionado ? '!' : '1'; break;
+                    case 0x03: letra = shift_pressionado ? '@' : '2'; break;
+                    case 0x04: letra = shift_pressionado ? '#' : '3'; break;
+                    case 0x05: letra = shift_pressionado ? '$' : '4'; break;
+                    case 0x06: letra = shift_pressionado ? '%' : '5'; break;
+                    case 0x07: letra = shift_pressionado ? '^' : '6'; break;
+                    case 0x08: letra = shift_pressionado ? '&' : '7'; break;
+                    case 0x09: letra = shift_pressionado ? '*' : '8'; break;
+                    case 0x0A: letra = shift_pressionado ? '(' : '9'; break;
+                    case 0x0B: letra = shift_pressionado ? ')' : '0'; break;
 
-                    case 0x34: letra = '.'; break; case 0x33: letra = ','; break;
-                    case 0x27: letra = ';'; break; case 0x0C: letra = '-'; break;
+                    // Pontuação e Símbolos
+                    case 0x34: letra = shift_pressionado ? '>' : '.'; break;
+                    case 0x33: letra = shift_pressionado ? '<' : ','; break;
+                    case 0x27: letra = shift_pressionado ? ':' : ';'; break;
+                    case 0x0C: letra = shift_pressionado ? '_' : '-'; break;
+                    case 0x0D: letra = shift_pressionado ? '+' : '='; break;
+                    case 0x35: letra = shift_pressionado ? '?' : '/'; break;
+                    case 0x1A: letra = shift_pressionado ? '{' : '['; break;
+                    case 0x1B: letra = shift_pressionado ? '}' : ']'; break;
                     case 0x39: letra = ' '; break;
 
                     case 0x1C: // ENTER
                         buffer[buf_idx] = '\0';
-
-                        // Agora verificamos comandos de forma mais flexível (Caps off)
                         if (starts_with(buffer, "--HELP") || starts_with(buffer, "--help")) {
                             buscar_e_imprimir_tag("[HELP]", &pos);
                         }
                         else if (starts_with(buffer, "--VERSION") || starts_with(buffer, "--version")) {
                             buscar_e_imprimir_tag("[VERS]", &pos);
+                        }
+                        else if (starts_with(buffer, "--INFO") || starts_with(buffer, "--info")) {
+                            buscar_e_imprimir_tag("[INFO]", &pos);
                         }
                         else if (starts_with(buffer, "CLEAR") || starts_with(buffer, "clear")) {
                             limpar_tela();
@@ -166,7 +191,6 @@ void kernel_main() {
                             print("COMANDO DESCONHECIDO", &pos, 0x0C);
                             pos = ((pos / 160) + 1) * 160;
                         }
-
                         print("> ", &pos, 0x0A);
                         buf_idx = 0;
                         update_cursor(pos);
@@ -182,15 +206,22 @@ void kernel_main() {
                         continue;
                 }
 
-                // 2. Lógica de Caixa Baixa: Se Caps Lock está OFF e é uma letra, soma 32 (ASCII)
-                if (!caps_lock_ativo && letra >= 'A' && letra <= 'Z') {
-                    letra = letra + 32;
+                // 4. Lógica de Caixa Alta/Baixa (XOR entre Caps e Shift)
+                if (letra >= 'A' && letra <= 'Z') {
+                    // Se Caps=1 e Shift=0 -> Maiúscula (Original)
+                    // Se Caps=1 e Shift=1 -> Minúscula (Inverte)
+                    // Se Caps=0 e Shift=1 -> Maiúscula
+                    // Se Caps=0 e Shift=0 -> Minúscula
+                    int deve_ser_maiuscula = caps_lock_ativo ^ shift_pressionado;
+                    if (!deve_ser_maiuscula) {
+                        letra = letra + 32;
+                    }
                 }
 
                 if (letra != 0 && buf_idx < 79) {
                     buffer[buf_idx++] = letra;
                     video[pos] = letra;
-                    video[pos + 1] = 0x0E;
+                    video[pos + 1] = 0x0E; // Amarelo
                     pos += 2;
                     update_cursor(pos);
                 }
